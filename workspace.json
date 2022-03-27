@@ -1,6 +1,6 @@
 {
   "version": 2,
   "projects": {
-    "blog": "apps/blog"
+    "nest-backend": "apps/nest-backend"
   }
 }
