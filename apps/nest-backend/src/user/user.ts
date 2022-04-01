@@ -6,15 +6,25 @@ export class User {
 
   private prisma = new PrismaClient();
 
-  findUserByID(userID) {
+  createUser(data) {
+    return this.prisma.user.create({ data });
+  }
+
+  async findUserByID(id) {
     return this.prisma.user.findUnique({
-      where: { id: userID }
+      where: { id: await id }
+    })
+  }
+
+  findUserByEmail(email) {
+    return this.prisma.user.findUnique({
+      where: { email }
     })
   }
 
   async updateUser(data, userID) {
     return this.prisma.user.update({
-      where: { id: userID },
+      where: { id: await userID },
       data: data
     })
   }

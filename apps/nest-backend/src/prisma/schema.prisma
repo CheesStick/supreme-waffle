@@ -8,24 +8,48 @@ generator client {
 }
 
 model User {
-
-  id        Int      @id @default(autoincrement())
-  username  String   @unique()
-  email     String   @unique()
+  id        Int       @id @default(autoincrement())
+  username  String    @unique()
+  email     String    @unique()
   password  String
-  image     String   @default("default.jpeg")
-  createdAt DateTime @default(now()) @db.Timestamp(6)
+  image     String    @default("default.jpeg")
+  createdAt DateTime  @default(now()) @db.Timestamp(6)
   Blog      Blog[]
+  Comment   Comment[]
 
+  @@map("user")
 }
 
 model Blog {
+  id        Int          @id @default(autoincrement())
+  title     String
+  snippet   String
+  body      String
+  published Boolean      @default(true)
+  category  Categories[]
+  createdAt DateTime     @default(now()) @db.Timestamp(6)
+  authorID  Int
+  User      User         @relation(fields: [authorID], references: [id])
+  Comment   Comment[]
+
+  @@unique([title, snippet, body])
+  @@map("blog")
+}
+
+model Comment {
   id        Int      @id @default(autoincrement())
-  title     String   @unique()
-  snippet   String   @unique()
-  body      String   @unique()
-  hide      Boolean  @default(true)
+  content   String   @unique()
+  blogID    Int
+  Blog      Blog     @relation(fields: [blogID], references: [id])
+  authorID  Int
+  User      User     @relation(fields: [authorID], references: [id])
   createdAt DateTime @default(now()) @db.Timestamp(6)
-  authorId  Int
-  User      User     @relation(fields: [authorId], references: [id])
+
+  @@map("comment")
+}
+
+enum Categories {
+  TECH
+  FOOD
+  SPORT
 }

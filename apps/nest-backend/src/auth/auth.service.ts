@@ -1,21 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient, User } from '@prisma/client';
-import { RegisterUserDto, LoginUserDto, LogoutUserDto } from './dto/register-user.dto';
+import { User } from '@prisma/client';
+import { RegisterUserDto } from './dto/register-user.dto';
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-
-const token = (id) => jwt.sign({ id }, process.env.JWT_SECRET_KEY, { expiresIn: '3d' });
+import { User as UserProvider } from '../user/user';
 
 @Injectable()
 export class AuthService {
 
-  private prisma = new PrismaClient();
+  constructor ( private user: UserProvider) {}
+
+  private token = (id) => jwt.sign({ id }, process.env.JWT_SECRET_KEY, { expiresIn: '3d' })
+
+  private userID = (token) => (
+    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
+      if ( err ) throw new Error('invalid token');
+      return decoded.id;
+    })
+  )
 
   async register(body: RegisterUserDto) {
     try {
       body.password = await bcrypt.hash(body.password, 10);
-      const user: User = await this.prisma.user.create({ data: body });
-      return token(user.id);
+      const user: User = await this.user.createUser(body);
+      return this.token(user.id);
     } catch (err) {
       if ( err.code === 'P2002' ) err.message = 'email already in use';
       return err.message;
@@ -23,30 +31,21 @@ export class AuthService {
 
   }
 
-  async login(body: LoginUserDto) {
+  async login(email, password) {
     try {
-      const { email, password } = body;
-      const user: User = await this.prisma.user.findUnique({ where: { email } });
+      const user: User = await this.user.findUserByEmail(email) ;
       const auth = await bcrypt.compare(password, user.password);
       if ( user && auth ) {
-        return token(user.id);
-      } throw new Error('incorrect password');
+        return  this.token(user.id) 
+      }
+      else throw new Error('incorrect password');
     } catch (err) {
       return err.message;
     }
   }
 
-  logout(body: LogoutUserDto)  {
-
-    try {
-      jwt.verify(body.token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
-        if ( err ) throw new Error('invalid token');
-        // await this.prisma.user.findUnique({ where: { id: decoded.id } });
-      })
-    } catch (err) {
-      return err.message;
-    }
-
+  async logout(token)  {
+    this.user.findUserByID( this.userID(token) ).catch( (err) => (err.message) );
   }
 
 }

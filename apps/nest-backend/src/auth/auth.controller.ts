@@ -21,7 +21,7 @@ export class AuthController {
 
   @Post('sign-in')
   sign_in(@Body() body: LoginUserDto) {
-    return this.authService.login(body)
+    return this.authService.login(body.email, body.password)
       .then( (data) => {
       if ( !validator.isJWT(data) ) throw new Error(data);
       return { success: true, data };
