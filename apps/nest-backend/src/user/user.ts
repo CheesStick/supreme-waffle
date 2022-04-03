@@ -6,8 +6,8 @@ export class User {
 
   private prisma = new PrismaClient();
 
-  createUser(data) {
-    return this.prisma.user.create({ data });
+  async createUser(data) {
+    return await this.prisma.user.create({ data });
   }
 
   async findUserByID(id) {
@@ -16,8 +16,8 @@ export class User {
     })
   }
 
-  findUserByEmail(email) {
-    return this.prisma.user.findUnique({
+  async findUserByEmail(email) {
+    return await this.prisma.user.findUnique({
       where: { email }
     })
   }

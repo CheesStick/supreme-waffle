@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@prisma/client';
-import { RegisterUserDto } from './dto/register-user.dto';
-import * as jwt from 'jsonwebtoken';
-import * as bcrypt from 'bcrypt';
 import { User as UserProvider } from '../user/user';
+import { User } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -19,14 +18,14 @@ export class AuthService {
     })
   )
 
-  async register(body: RegisterUserDto) {
+  async register(body) {
     try {
       body.password = await bcrypt.hash(body.password, 10);
       const user: User = await this.user.createUser(body);
       return this.token(user.id);
     } catch (err) {
       if ( err.code === 'P2002' ) err.message = 'email already in use';
-      return err.message;
+      throw new Error(err.message);
     }
 
   }
@@ -40,7 +39,7 @@ export class AuthService {
       }
       else throw new Error('incorrect password');
     } catch (err) {
-      return err.message;
+      throw new Error(err.message);
     }
   }
 

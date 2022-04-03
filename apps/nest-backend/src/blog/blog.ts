@@ -9,9 +9,23 @@ export class Blog {
   async findAllBlogs(category, take = 10) {
     if ( category ) {
       return await this.prisma.blog.findMany({ 
-        where: { category }
+        where: { 
+          category: {
+            equals: category
+          } 
+        }
       })
     } return await this.prisma.blog.findMany({ take })
+  }
+
+  async createBlog(data, userID) {
+    return await this.prisma.blog.create({ 
+      data: {
+        ...data,
+        User: { 
+          connect: { id: await userID }
+        }
+    } });
   }
 
 }

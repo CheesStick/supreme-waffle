@@ -6,22 +6,24 @@ import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { User as UserProvider } from './user';
 
-const userID = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
-    if ( err ) throw new Error('invalid token');
-    return decoded.id;
-  })
-}
-
 @Injectable()
 export class UserService {
 
   constructor ( private user: UserProvider ) {}
 
+  private path = '/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img';
+
+  private userID = (token) => (
+    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
+      if ( err ) throw new Error('invalid token');
+      return decoded.id;
+    })
+  )
+
   async getUser(token) {
     try {
-      const user: User = await this.user.findUserByID( userID(token) );
-      const image = readFileSync(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/${ user.image }`);
+      const user: User = await this.user.findUserByID( this.userID(token) );
+      const image = readFileSync(`${ this.path }/${ user.image }`);
 
       return { data: {
         username: user.username,
@@ -38,7 +40,7 @@ export class UserService {
     try {
 
       if ( username || email ) {
-        const user: User = await this.user.updateUser({ username, email }, userID(token));
+        const user: User = await this.user.updateUser({ username, email }, this.userID(token));
         return { username: user.username, email: user.email };
       } else throw new Error('data must be provided to update user account');
 
@@ -50,13 +52,13 @@ export class UserService {
   async updateUserPhoto(file, token) {
     try {
       
-      const user: User =  await this.user.findUserByID( userID(token) );
+      const user: User =  await this.user.findUserByID( this.userID(token) );
   
       if ( file ) {
         const filename = `${ user.id }-${ Date.now() }.jpeg`;
           
         if ( user.image !== 'default.jpeg' ) {
-          unlink(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/${ user.image }`, (err) => {
+          unlink(`${ this.path }/${ user.image }`, (err) => {
             if ( err ) throw err.message;
           });
         }
@@ -64,11 +66,11 @@ export class UserService {
         sharp(file.buffer)
           .resize(100)
           .jpeg()
-          .toFile(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/${ filename }`);
+          .toFile(`${ this.path }/${ filename }`);
 
-        await this.user.updateUser({ image: filename }, userID(token));
+        await this.user.updateUser({ image: filename }, this.userID(token));
 
-        return readFileSync(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/${ filename }`);
+        return readFileSync(`${ this.path }/${ filename }`);
       } else throw new Error('data must be provided to update user account');
 
     } catch (err) {
@@ -78,11 +80,11 @@ export class UserService {
 
   async updateUserPassword(currentPassword, password, token) {
     try {
-      const user: User = await this.user.findUserByID( userID(token) );
+      const user: User = await this.user.findUserByID( this.userID(token) );
       const match = await bcrypt.compare(currentPassword, user.password);
       if ( match ) {
         password = await bcrypt.hash(password, 10);
-        await this.user.updateUser({ password }, userID(token));
+        await this.user.updateUser({ password }, this.userID(token));
       } else throw new Error('Invalid password');
       return true;
     } catch (err) {

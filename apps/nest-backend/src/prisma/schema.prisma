@@ -16,7 +16,6 @@ model User {
   createdAt DateTime  @default(now()) @db.Timestamp(6)
   Blog      Blog[]
   Comment   Comment[]
-
   @@map("user")
 }
 
@@ -31,7 +30,6 @@ model Blog {
   authorID  Int
   User      User         @relation(fields: [authorID], references: [id])
   Comment   Comment[]
-
   @@unique([title, snippet, body])
   @@map("blog")
 }
@@ -44,7 +42,6 @@ model Comment {
   authorID  Int
   User      User     @relation(fields: [authorID], references: [id])
   createdAt DateTime @default(now()) @db.Timestamp(6)
-
   @@map("comment")
 }
 
