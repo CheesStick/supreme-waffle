@@ -15,6 +15,7 @@
     "@nestjs/passport": "^8.2.1",
     "@nestjs/platform-express": "^8.0.0",
     "@prisma/client": "^3.11.0",
+    "@types/superstruct": "^0.8.2",
     "bcrypt": "^5.0.1",
     "chalk": "^5.0.1",
     "class-transformer": "^0.5.1",
@@ -28,6 +29,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.0.0",
     "sharp": "^0.30.3",
+    "superstruct": "^0.15.4",
     "tslib": "^2.0.0",
     "validator": "^13.7.0"
   },

@@ -1,64 +1,57 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { readFileSync, unlink } from 'fs';
 import * as sharp from 'sharp';
-import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import { User as UserProvider } from './user';
+import { assert } from 'superstruct';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class UserService {
 
-  constructor ( private user: UserProvider ) {}
+  constructor ( private readonly user: UserProvider, private readonly prisma: PrismaService ) {}
 
-  private path = '/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img';
-
-  private userID = (token) => (
-    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
-      if ( err ) throw new Error('invalid token');
-      return decoded.id;
-    })
-  )
-
-  async getUser(token) {
+  async getUser(userID) {
     try {
-      const user: User = await this.user.findUserByID( this.userID(token) );
-      const image = readFileSync(`${ this.path }/${ user.image }`);
-
-      return { data: {
+      const user: User = await this.user.findUserByID( userID );
+      return { success: true, data: {
         username: user.username,
         email: user.email,
-        image
+        image: readFileSync(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/users/${ user.image }`)
       } };
 
     } catch (err) {
-      return err.message;
+      throw new HttpException("internel server error", HttpStatus.INTERNAL_SERVER_ERROR);
     }
   } 
 
-  async updateUser(username, email, token) {
+  async updateUser(username, email, userID) {
     try {
 
-      if ( username || email ) {
-        const user: User = await this.user.updateUser({ username, email }, this.userID(token));
-        return { username: user.username, email: user.email };
-      } else throw new Error('data must be provided to update user account');
+      assert({ username, email }, this.prisma.updateUserInfo);
+      const user: User = await this.user.updateUser({ username, email }, userID);
+      return { success: true, data: {
+        username: user.username,
+        email: user.email
+      } };
 
     } catch (err) {
-      return err.message;
+      if ( err.code === 'P2002' ) err.meta.target = "email or username has already been taken";
+      return err;
     }
   }
 
-  async updateUserPhoto(file, token) {
+  async updateUserPhoto(file, userID) {
     try {
       
-      const user: User =  await this.user.findUserByID( this.userID(token) );
+      const user: User =  await this.user.findUserByID( userID );
   
       if ( file ) {
         const filename = `${ user.id }-${ Date.now() }.jpeg`;
           
         if ( user.image !== 'default.jpeg' ) {
-          unlink(`${ this.path }/${ user.image }`, (err) => {
+          unlink(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/users/${ user.image }`, (err) => {
             if ( err ) throw err.message;
           });
         }
@@ -66,25 +59,28 @@ export class UserService {
         sharp(file.buffer)
           .resize(100)
           .jpeg()
-          .toFile(`${ this.path }/${ filename }`);
+          .toFile(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/users/${ filename }`);
 
-        await this.user.updateUser({ image: filename }, this.userID(token));
+        await this.user.updateUser({ image: filename }, userID);
 
-        return readFileSync(`${ this.path }/${ filename }`);
-      } else throw new Error('data must be provided to update user account');
+        return {
+          success: true,
+          image: readFileSync(`/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/users/${ filename }`, 'base64')
+        }
+      } throw new HttpException('no data provided', HttpStatus.BAD_REQUEST);
 
     } catch (err) {
-      return err.message;
+      return err;
     }
   }
 
-  async updateUserPassword(currentPassword, password, token) {
+  async updateUserPassword(currentPassword, password, userID) {
     try {
-      const user: User = await this.user.findUserByID( this.userID(token) );
+      const user: User = await this.user.findUserByID( userID );
       const match = await bcrypt.compare(currentPassword, user.password);
       if ( match ) {
         password = await bcrypt.hash(password, 10);
-        await this.user.updateUser({ password }, this.userID(token));
+        await this.user.updateUser({ password }, userID);
       } else throw new Error('Invalid password');
       return true;
     } catch (err) {

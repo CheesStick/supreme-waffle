@@ -2,6 +2,7 @@ import { Controller, Body, Post, Delete, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from './auth.guard';
 import { RegisterUserDto, LoginUserDto, LogoutUserDto } from './dto/auth.dto';
+import { UserID } from '../user/user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -9,24 +10,18 @@ export class AuthController {
 
   @Post('sign-up')
   sign_up(@Body() body: RegisterUserDto) {
-    return this.authService.register(body)
-      .then( (data) => ( { success: true, data } ) )
-      .catch( (err) => ( { success: false, msg: err.message } ) );
+    return this.authService.register(body);
   }
 
   @Post('sign-in')
   sign_in(@Body() body: LoginUserDto) {
-    return this.authService.login(body.email, body.password)
-      .then( (data) => ( { success: true, data } ) )
-      .catch( (err) => ( { success: false, msg: err.message } ) );
+    return this.authService.login(body.email, body.password);
   }
 
   @Delete('sign-out')
   @UseGuards(AuthGuard)
-  sign_out(@Body() body: LogoutUserDto) {
-    return this.authService.logout(body)
-      .then( _ => ( { success: true } ) )
-      .catch( (err) => ( { success: false, msg: err.message } ) );
+  sign_out(@UserID() userID) {
+    return this.authService.logout(userID);
   }
 
 }

@@ -1,35 +1,105 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { Blog } from '@prisma/client';
-import { Blog as BlogProvider } from './blog';
-import * as jwt from 'jsonwebtoken';
+import { readFileSync } from 'fs';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class BlogService {
 
-  constructor ( private blog: BlogProvider ) {}
+  constructor (private readonly prisma: PrismaService) {}
 
-  private userID = (token) => (
-    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
-      if (err) throw new Error('invalid token');
-      return decoded.id;
-    })
-  )
+  private path = '/home/mohamed/Documents/projects/webdev/blog/apps/nest-backend/src/assets/img/bgs';
 
-  async getBlogs(category, limit) {
+  async getBlogs(category, take = 10) {
     try {
-      return await this.blog.findAllBlogs(category, limit);
+
+      let blogs: Blog[];
+
+      if ( category ) {
+        blogs = await this.prisma.blog.findMany({ 
+          where: { 
+            category: {
+              equals: category
+            } 
+          }
+        });
+
+      } else blogs = await this.prisma.blog.findMany({ take });
+
+      if ( blogs ) {
+        return { success: true, blogs }
+      } throw new HttpException("blogs wasn't found", HttpStatus.NOT_FOUND);
+
     } catch (err) {
-      throw new Error(err.message);
+      return err;
     }
   }
 
-  async createBlog(body, token) {
+  async getBlog(id) {
     try {
-      const blog: Blog = await this.blog.createBlog(body, this.userID(token));
-      return blog.id;
+      const blog: Blog = await this.prisma.blog.findUnique({
+        where: { id }
+      });
+
+      if ( blog ) {
+        return { success: true, blog };
+      } throw new HttpException("blog wasn't found", HttpStatus.NOT_FOUND);
     } catch (err) {
-      console.error('error', err.message);
-      throw new Error(err.message);
+      return err;
+    }
+  }
+
+  async createBlog(data, id) {
+    try {
+      const blog: Blog = await this.prisma.blog.create({ 
+        data: {
+          ...data,
+          user: { connect: { id } }
+        } 
+      });
+      
+      if (blog) {
+        return { success: true, blogID: blog.id };
+      } throw new HttpException('no blog data was provided', HttpStatus.NO_CONTENT);
+    } catch (err) {
+      return err;
+    }
+  }
+
+  async updateBlogInfo(data, id) {
+    try {
+
+      if ( data ) {
+        await this.prisma.blog.update({
+          where: { id },
+          data
+        });
+
+        return { success: true };
+      } throw new HttpException('no blog data was provided', HttpStatus.NO_CONTENT);
+
+    } catch (err) {
+      return err;
+    }
+  }
+
+  async updateBlogBG(image, id) {
+    try {
+
+      if ( image ) {
+         const blog: Blog = await this.prisma.blog.update({
+           where: { id },
+           data: { bg: image }
+         });
+
+         const bg = readFileSync(`${ this.path }/${ blog.bg }`);
+
+         return { success: true, bg };
+
+      } throw new HttpException('no blog data was provided', HttpStatus.NO_CONTENT);
+
+    } catch (err) {
+      return err;
     }
   }
 

@@ -24,6 +24,8 @@ model Blog {
   title     String
   snippet   String
   body      String
+  likes     Int         @default(0)
+  bg      String  @default("bg_default.jpeg")
   published Boolean      @default(true)
   category  Categories[]
   createdAt DateTime     @default(now()) @db.Timestamp(6)
